@@ -213,38 +213,41 @@ async def predict_fraud(request: PredictRequest) -> PredictResponse:
     # 1. Feature Engineering
     features_df = extract_features(request)
 
-    # 2. Model Inference
-    risk_prob, scaled_features = model_service.predict_risk(features_df)
+    # 2. Model Inference & Tree Contribution Attribution (Saabas decomposition)
+    raw_risk, scaled_features, contributions = model_service.predict_risk_and_contributions(features_df)
 
-    # 3. Verdict Determination based on configured threshold
+    # 3. Handle impossible / overdraft transaction behavior
+    # If amount exceeds sender's current balance, flag as anomaly and enforce Level-2 warning
+    is_impossible = request.amount > request.sender_balance
+
+    # 4. Generate plain-language explanation factors grounded in model contributions
     threshold = settings.DECISION_THRESHOLD
-    verdict = "FLAGGED" if risk_prob >= threshold else "CLEARED"
-
-    # 4. Generate plain-language explanation factors
-    importances = getattr(model_service.model, "feature_importances_", None)
-    reasons = generate_reasons(
+    effective_risk, verdict, reasons = generate_reasons(
         tx_type=request.type,
         amount=request.amount,
         sender_balance=request.sender_balance,
         recipient_balance=request.recipient_balance,
         time_str=request.time,
-        fraud_risk=risk_prob,
-        feature_importances=importances,
+        raw_model_risk=raw_risk,
+        threshold=threshold,
+        contributions=contributions,
+        is_impossible=is_impossible,
     )
 
     elapsed_ms = (time.perf_counter() - t0) * 1000.0
 
     # Structured logging (NO PII or sensitive account details)
     logger.info(
-        f"Prediction: type={request.type.value} risk={risk_prob:.4f} "
-        f"verdict={verdict} latency_ms={elapsed_ms:.2f}"
+        f"Prediction: type={request.type.value} raw_risk={raw_risk:.4f} "
+        f"effective_risk={effective_risk:.4f} verdict={verdict} latency_ms={elapsed_ms:.2f}"
     )
 
     return PredictResponse(
-        risk=round(risk_prob, 4),
+        risk=round(effective_risk, 4),
         verdict=verdict,
         threshold=threshold,
         reasons=reasons,
         model=model_service.model_name,
         latency_ms=round(elapsed_ms, 2),
     )
+

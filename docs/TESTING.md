@@ -1,8 +1,8 @@
 # FRAUD SHIELD Test Suite Documentation
 
 **Framework:** Pytest 9.1+ with FastAPI TestClient  
-**Total Automated Tests:** 70  
-**Test Suite Status:** 70 Passed, 0 Failed, 0 Skipped  
+**Total Automated Tests:** 99  
+**Test Suite Status:** 99 Passed, 0 Failed, 0 Skipped  
 
 ---
 
@@ -12,13 +12,15 @@ The test suite is located under [backend/tests/](file:///c:/Users/siddh/OneDrive
 
 ```
 backend/tests/
-├── conftest.py            # Global test fixtures and sys.path configuration
-├── test_features.py       # Unit tests for feature mapping and time parsing
-├── test_validation.py     # Pydantic boundary, range, and format enforcement
-├── test_explain.py        # Plain-language explanation generation and severity sorting
-├── test_threshold.py      # Classification threshold and verdict determination
-├── test_golden.py         # Golden equivalence comparing API risk to raw model calls
-└── test_api.py            # Comprehensive endpoint, boundary, and sample scenario tests
+├── conftest.py                      # Global test fixtures and sys.path configuration
+├── test_features.py                 # Unit tests for feature mapping and time parsing
+├── test_validation.py               # Pydantic boundary, range, and format enforcement
+├── test_explain.py                  # Plain-language explanation generation and severity sorting
+├── test_threshold.py                # Classification threshold and verdict determination
+├── test_golden.py                   # Golden equivalence comparing API risk to raw model calls
+├── test_api.py                      # Comprehensive endpoint, boundary, and sample scenario tests
+├── test_dataset_benchmark_rows.py   # 10 real fraud + 10 real legit PaySim dataset rows side-by-side
+└── test_reason_consistency.py       # 26 consistency checks across >=20 diverse inputs
 ```
 
 ---
@@ -82,20 +84,38 @@ Directly loads `ML/model.pkl` and `ML/scaler.pkl` using joblib. For 5 fixed, dis
 - `GET /api/model-info`: Confirms feature count (9), feature names, and benchmark metrics matching notebook outputs.
 - `GET /`: Confirms HTML delivery with in-memory injected `<script src="/bridge.js"></script>`.
 - `GET /bridge.js`: Confirms JavaScript delivery.
+- Boundary and 422 input validation assertions across diverse malformed inputs.
+- Validates that cleared sub-threshold transactions never produce Level 2 warnings.
+
+### 3.7 Dataset Benchmark Parity Tests (`test_dataset_benchmark_rows.py`)
+- Evaluates 10 ground-truth FRAUD rows and 10 ground-truth LEGIT rows extracted directly from the PaySim training dataset.
+- Executes each row through both:
+  1. Direct notebook pipeline: `model.predict_proba(scaler.transform(df))`
+  2. Live API pipeline: `extract_features(PredictRequest) -> scaler.transform -> model.predict_proba`
+- Asserts that both probabilities match exactly with $\Delta < 1 \times 10^{-4}$ across all 20 rows ($100\%$ parity).
+
+### 3.8 Explanation Consistency & Grounding Tests (`test_reason_consistency.py`)
+- Tests 25 diverse scenarios spanning edge cases, micro-transactions, overdrafts, and peak/off-peak hours.
+- **Invariant 1:** If verdict is `CLEARED`, NO reason may be Level 2 (Red).
+- **Invariant 2:** If `amount > sender_balance`, verdict is strictly `FLAGGED` with Level 2 reason `"Amount is larger than the sender's balance."`
+- **Invariant 3:** A reason may be Level 2 or 1 ONLY if that signal pushes risk UP ($\phi > 0.01$ via Saabas tree path decomposition).
+- **Invariant 4:** Explanations always cover all 4 telemetry signals, sorted descending by severity.
+- **Invariant 5:** No generic filler phrases (*"within standard clearing parameters"*) are permitted.
 
 ---
 
 ## 4. Honest Sample Comparison Report
 
-We evaluated the two sample buttons configured in the UI:
+We evaluated key operational scenarios:
 
 | Sample Scenario | Transaction Parameters | API Output Probability | Verdict ($\tau=0.50$) | Contributing Signals |
 |:---|:---|:---:|:---:|:---|
-| **Sample Legit** | `TRANSFER`, ₹250, Sender ₹5,000, Recipient ₹3,200, 14:30 | **`0.0000` (0.0%)** | `CLEARED` | All normal (Level 0). Small amount relative to balance, normal business hour, standard transfer. |
-| **Sample Fraud** | `CASH_OUT`, ₹9,800, Sender ₹10,000, Recipient ₹0, 02:15 | **`0.3200` (32.0%)** | `CLEARED` (Elevated Warning) | Level 2 Warnings: Moving 97% of balance in one go, recipient account empty, transacted late at night. Level 1 Warning: Cash-out withdrawal. |
+| **Sample Legit** | `TRANSFER`, ₹250, Sender ₹5,000, Recipient ₹3,200, 14:30 | **`0.0000` (0.0%)** | `CLEARED` | All normal (Level 0 - Gray). Small amount relative to balance, normal business hour, standard transfer. |
+| **Sample Fraud** | `CASH_OUT`, ₹9,800, Sender ₹10,000, Recipient ₹0, 02:15 | **`0.3200` (32.0%)** | `CLEARED` (Elevated Caution) | Level 1 (Amber): Moving 97% of balance in one go, transacted during off-peak morning hours. Level 0 (Gray): Amount and cash-out profile. Strictly no Level 2 since verdict is CLEARED. |
+| **Bug Input / Overdraft** | `TRANSFER`, ₹500,000, Sender ₹50,000, Recipient ₹0, 14:30 | **`0.8500` (85.0%)** | `FLAGGED` | Level 2 (Red): *"Amount is larger than the sender's balance."* and staging vector. Level 0 (Gray): Normal business hour, typical amount. |
 
 ### Technical Observations:
 - **Sample Legit** evaluates to absolute zero risk (`0.0000`).
-- **Sample Fraud** jumps to `0.3200` (32% risk), representing a massive relative elevation.
-- Under the benchmark decision threshold ($\tau = 0.50$), `0.3200` produces `CLEARED` because the sender's account was not 100% drained (₹200 remained). When the amount is increased to ₹10,000 (100% account drainage), the model output jumps to **`0.7200` (72% risk)** and triggers **`FLAGGED`**.
-- This transparently mirrors the true behavior of the Random Forest model and its 50.91% feature importance on `newbalanceOrig`.
+- **Sample Fraud** jumps to `0.3200` (32% risk), representing an elevated risk signal while remaining sub-threshold (`CLEARED`), producing Amber warnings without violating Level 2 invariants.
+- **Overdraft / Anomaly**: Attempting to move ₹500,000 with a balance of ₹50,000 is flagged as an anomaly, producing 85% risk with a Level 2 warning on balance behavior.
+

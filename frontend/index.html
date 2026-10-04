@@ -1,0 +1,1120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>FRAUD SHIELD</title>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<style>
+:root{
+  --obsidian:#0A0813; --slate:#141020; --gold:#D4AF37; --champagne:#F5E0A3;
+  --patina:#99792E; --amber:#E65C00; --crimson:#EF4444; --titanium:#E2E8F0;
+  --green:#3FBF7F; --cyan:#3FE0E8;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-padding-top:env(safe-area-inset-top,0px); background:var(--obsidian); scroll-behavior:smooth;}
+body{
+  background:var(--obsidian); color:var(--titanium);
+  font-family:'Inter',sans-serif; overflow-x:hidden;
+}
+::selection{background:var(--gold); color:var(--obsidian);}
+.mono{font-family:'IBM Plex Mono',monospace;}
+#bgcanvas{position:fixed; inset:0; z-index:0; width:100%; height:100%;}
+.gold-grad{
+  background-image:linear-gradient(to right, #0A0813 0%, #C9A227 15%, #FFF4D6 35%, #FFD700 50%, #FFF4D6 65%, #C9A227 85%, #0A0813 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent;
+  filter:url(#goldNoise);
+  animation:goldShine 6s linear infinite;
+}
+@keyframes goldShine{
+  0%{background-position:-200% center;}
+  100%{background-position:200% center;}
+}
+
+/* COIN */
+.coin-wrap{
+  position:fixed; left:10px; top:0; z-index:40; pointer-events:none;
+  width:56px; height:56px; perspective:600px;
+  transform:translateY(24px);
+  filter:drop-shadow(0 8px 16px rgba(0,0,0,0.55));
+}
+.coin{ position:relative; width:100%; height:100%; transform-style:preserve-3d; }
+.coin-face{
+  position:absolute; inset:0; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  backface-visibility:hidden;
+  background:radial-gradient(circle at 35% 28%, #F5E0A3 0%, #D4AF37 42%, #99792E 78%, #5C4C1C 100%);
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,0.28),
+    inset 0 0 0 4px rgba(92,76,28,0.55),
+    inset 0 -5px 8px rgba(0,0,0,0.3);
+  filter:url(#goldNoise);
+}
+.coin-back{ transform:rotateY(180deg); background:radial-gradient(circle at 65% 72%, #99792E 0%, #D4AF37 45%, #5C4C1C 100%); }
+.coin-fs{
+  font-family:'Anton',sans-serif; font-size:17px; letter-spacing:0.01em; color:#4a3c12;
+  text-shadow:0 1px 0 rgba(255,255,255,0.55), 0 -1px 1px rgba(0,0,0,0.45);
+}
+@media(max-width:640px){ .coin-wrap{ width:38px; height:38px; left:7px; } .coin-fs{ font-size:12px; } }
+
+/* LASER */
+.laser-wrap{
+  position:fixed; top:0; left:38px; z-index:39; pointer-events:none;
+  width:2px; height:100vh; transform-origin:top center; will-change:transform;
+}
+.laser-beam{
+  width:100%; height:100%;
+  background:linear-gradient(to bottom, rgba(212,175,55,0) 0%, rgba(212,175,55,0.35) 25%, rgba(245,224,163,0.9) 70%, #F5E0A3 100%);
+  box-shadow:0 0 6px 1.5px rgba(212,175,55,0.5), 0 0 16px 4px rgba(212,175,55,0.2);
+}
+.laser-emitter{
+  position:fixed; top:0; left:38px; z-index:41; pointer-events:none;
+  width:12px; height:6px; border-radius:0 0 6px 6px; transform:translateX(-50%);
+  background:radial-gradient(circle, #F5E0A3, #D4AF37 70%, transparent 100%);
+  box-shadow:0 0 12px 4px rgba(245,224,163,0.75);
+}
+
+#hero, #problem, #howitworks{ padding-left:calc(6vw + 62px); }
+@media(max-width:640px){
+  #hero, #problem, #howitworks{ padding-left:calc(6vw + 44px); }
+  #trymodel, #final{ padding-left:calc(6vw + 44px); }
+}
+.glass{
+  background:rgba(14,18,23,0.68); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  border:1px solid rgba(212,175,55,0.2);
+  box-shadow:0 8px 32px rgba(0,0,0,0.6);
+}
+.wrap{position:relative; z-index:2;}
+section{min-height:100vh; position:relative; display:flex; align-items:center; padding:6vh 6vw;}
+
+/* NAV */
+nav{
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  padding:calc(env(safe-area-inset-top,0px) + 22px) 6vw 18px;
+  display:flex; justify-content:space-between; align-items:center;
+  mix-blend-mode:normal;
+  background:linear-gradient(180deg, rgba(8,9,14,0.92), rgba(8,9,14,0.55));
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid rgba(212,175,55,0.12);
+}
+.nav-links a{position:relative; padding:6px 2px;}
+.nav-links a::after{content:''; position:absolute; left:0; right:0; bottom:0; height:2px; border-radius:2px; background:var(--gold); transform:scaleX(0); transform-origin:left; transition:transform .25s ease;}
+.nav-links a.active{color:var(--champagne);}
+.nav-links a.active::after{transform:scaleX(1);}
+nav .logo{font-family:'Anton',sans-serif; font-weight:400; letter-spacing:0.06em; font-size:19px; text-transform:uppercase;}
+.nav-links{display:flex; gap:30px;}
+.nav-links a{color:#E4DAC0; font-size:11px; letter-spacing:0.04em; text-decoration:none; transition:color .2s ease;}
+.nav-links a:hover{color:var(--champagne);}
+@media(max-width:860px){ .nav-links{display:none;} }
+nav .logo span{color:var(--gold);}
+.brand-font{font-family:'Anton',sans-serif; font-weight:400; text-transform:uppercase;}
+nav .status{font-size:11px; color:#D9BB6B; display:flex; gap:8px; align-items:center;}
+.pulse{width:6px; height:6px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green);}
+
+/* HERO */
+#hero{flex-direction:column; align-items:flex-start; justify-content:center; padding-top:12vh;}
+.badge{
+  display:inline-flex; align-items:center; gap:8px; padding:6px 14px; border-radius:999px;
+  border:1px solid rgba(212,175,55,0.4); font-size:11px; letter-spacing:0.06em; color:var(--champagne);
+  margin-bottom:28px;
+}
+h1{
+  font-size:clamp(3rem, 9vw, 6.8rem); font-weight:700; line-height:1;
+}
+.hero-sub{
+  margin-top:22px; max-width:46ch; font-size:16px; color:#E4DAC0; line-height:1.6;
+}
+.metrics{display:flex; gap:44px; margin-top:56px; flex-wrap:wrap;}
+.metric .val{font-family:'IBM Plex Mono',monospace; font-size:26px; color:var(--champagne); font-weight:600;}
+.metric .lbl{font-size:11px; color:#C9B98F; margin-top:4px;}
+.scroll-cue{
+  position:absolute; bottom:36px; left:6vw; display:flex; align-items:center; gap:10px; font-size:11px; color:#C9B98F;
+}
+.scroll-line{width:1px; height:34px; background:linear-gradient(var(--gold), transparent); animation:scrolldraw 1.8s ease-in-out infinite;}
+@keyframes scrolldraw{0%{opacity:.2} 50%{opacity:1} 100%{opacity:.2}}
+
+/* SECTION 2 */
+#problem{flex-direction:column; gap:34px;}
+.split{display:grid; grid-template-columns:1.1fr 0.9fr; gap:56px; width:100%; align-items:center;}
+@media(max-width:860px){.split{grid-template-columns:1fr;}}
+.eyebrow-inline{font-size:13px; color:var(--amber); font-weight:600; margin-bottom:14px;}
+.section-tag{
+  display:inline-flex; align-items:center; align-self:flex-start; gap:8px;
+  padding:9px 18px; margin-bottom:18px; border-radius:10px;
+  font-size:12px; letter-spacing:0.12em; font-weight:600; color:var(--gold);
+  background:rgba(14,18,23,0.68); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  border:1px solid rgba(212,175,55,0.35); border-left:3px solid var(--amber);
+  box-shadow:0 6px 24px rgba(0,0,0,0.5), 0 0 18px rgba(212,175,55,0.14);
+}
+.section-tag.sm{padding:6px 12px; font-size:10px; letter-spacing:0.1em; margin-bottom:14px; border-radius:8px; border-left-width:2px;}
+/* Model comparison: everything centered on the same axis as the cards */
+.mc-section{text-align:center;}
+.mc-section .section-tag{align-self:center;}
+.mc-section .mc-legend{justify-content:center;}
+.mc-section .body-text{margin-left:auto; margin-right:auto; text-align:center; max-width:60ch;}
+.mc-section .model-compare{text-align:left;}
+#howitworks h2{max-width:none; text-wrap:balance;}
+h2{font-size:clamp(1.8rem,4vw,2.7rem); font-weight:700; letter-spacing:-0.01em; margin-bottom:18px; max-width:12ch;}
+.body-text{color:#E4DAC0; font-size:15.5px; line-height:1.75; max-width:52ch;}
+.telemetry-card{padding:26px; border-radius:14px;}
+.telemetry-row{display:flex; justify-content:space-between; align-items:center; padding:13px 0; border-bottom:1px solid rgba(255,255,255,0.06);}
+.telemetry-row:last-child{border-bottom:none;}
+.telemetry-row .k{font-size:12.5px; color:#D8CCAA;}
+.telemetry-row .v{font-family:'IBM Plex Mono',monospace; font-size:13.5px; font-weight:600;}
+.mon-status{display:flex; align-items:center; gap:8px; font-size:11.5px; color:var(--green); letter-spacing:0.06em; margin-bottom:22px;}
+.mon-sub{font-size:10.5px; color:#C9B98F; letter-spacing:0.1em; padding-bottom:6px; border-bottom:1px solid rgba(255,255,255,0.06);}
+.sig-dot{width:9px; height:9px; border-radius:50%; background:var(--green); box-shadow:0 0 8px var(--green); animation:sigpulse 2.2s ease-in-out infinite;}
+.telemetry-row:nth-child(5) .sig-dot{animation-delay:.3s;}
+.telemetry-row:nth-child(6) .sig-dot{animation-delay:.6s;}
+.telemetry-row:nth-child(7) .sig-dot{animation-delay:.9s;}
+@keyframes sigpulse{0%,100%{opacity:.45; transform:scale(.85);} 50%{opacity:1; transform:scale(1.1);}}
+.mon-footer{margin-top:10px; padding-top:20px; border-top:1px solid rgba(212,175,55,0.25);}
+.mon-big{font-size:22px; font-weight:600; color:var(--champagne);}
+.mon-lbl{font-size:11px; color:#C9B98F; margin-top:4px; letter-spacing:0.08em;}
+.v.flag{color:var(--amber);}
+.v.crit{color:var(--crimson);}
+
+/* SECTION 3 */
+#howitworks{flex-direction:column; align-items:flex-start;}
+.signal-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px; width:100%; margin-top:28px;}
+@media(max-width:860px){.signal-grid{grid-template-columns:1fr;}}
+.signal-card{padding:24px 22px; border-radius:14px; display:flex; flex-direction:column; gap:10px;}
+.signal-name{font-weight:700; color:var(--champagne); font-size:15px;}
+.signal-desc{color:#E4DAC0; font-size:13.5px; line-height:1.6;}
+a:focus-visible, button:focus-visible, input:focus-visible, select:focus-visible{
+  outline:2px solid var(--cyan); outline-offset:3px; border-radius:4px;
+}
+
+/* SECTION 4 */
+#gate{flex-direction:column; align-items:flex-start;}
+.perf-grid{display:grid; grid-template-columns:repeat(4,1fr); gap:16px; margin:36px 0; width:100%;}
+@media(max-width:860px){.perf-grid{grid-template-columns:repeat(2,1fr);}}
+.perf-card{padding:20px; border-radius:12px; text-align:left;}
+.perf-card .n{font-family:'IBM Plex Mono',monospace; font-size:24px; color:var(--champagne); font-weight:600;}
+.perf-card .l{font-size:10.5px; color:#C9B98F; margin-top:6px;}
+.shap-list{width:100%; max-width:640px;}
+.shap-row{display:flex; align-items:center; gap:14px; padding:10px 0;}
+.shap-row .name{font-size:12.5px; color:#E4DAC0; width:190px; flex-shrink:0;}
+.shap-track{flex:1; height:6px; background:rgba(255,255,255,0.06); border-radius:3px; overflow:hidden;}
+.shap-fill{height:100%; background:linear-gradient(90deg,var(--patina),var(--gold));}
+.shap-pct{font-family:'IBM Plex Mono',monospace; font-size:11.5px; color:var(--gold); width:40px; text-align:right;}
+
+/* SECTION 5 */
+#trymodel{flex-direction:column; align-items:center;}
+.sim-panel{width:100%; max-width:920px; padding:38px; border-radius:18px;}
+.sim-grid{display:grid; grid-template-columns:1fr 1fr; gap:44px; margin-top:30px;}
+@media(max-width:860px){.sim-grid{grid-template-columns:1fr;}}
+.form-col{display:flex; flex-direction:column;}
+.field-group{margin-bottom:22px;}
+.field-group label{
+  display:block; font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.04em;
+  color:#E4DAC0; margin-bottom:8px;
+}
+.field-group input[type=text], .field-group input[type=time], .field-group select{
+  width:100%; padding:11px 14px; border-radius:8px; font-size:14px;
+  background:rgba(255,255,255,0.03); border:1px solid rgba(212,175,55,0.25);
+  color:var(--champagne); font-family:'IBM Plex Mono',monospace; outline:none;
+  transition:border-color .2s ease, box-shadow .2s ease;
+}
+.field-group input[type=text]:focus, .field-group input[type=time]:focus, .field-group select:focus{
+  border-color:var(--cyan); box-shadow:0 0 0 3px rgba(63,224,232,0.12);
+}
+.field-group select option{ background:#141020; color:var(--champagne); }
+.field-group input.invalid{ border-color:var(--crimson); box-shadow:0 0 0 3px rgba(239,68,68,0.12); }
+.field-help{ font-size:10.5px; color:#C9B98F; margin-top:6px; line-height:1.4; }
+.field-error{ font-size:10.5px; color:var(--crimson); margin-top:6px; min-height:1px; }
+.log-btn{
+  margin-top:22px; width:100%; padding:13px; border-radius:8px; border:1px solid rgba(212,175,55,0.4);
+  background:transparent; color:var(--champagne); font-size:12px; letter-spacing:0.04em; cursor:pointer;
+  transition:all .25s ease;
+}
+.log-btn:hover{background:rgba(212,175,55,0.1); border-color:var(--gold);}
+
+/* LEDGER */
+#final{flex-direction:column; align-items:center; justify-content:center;}
+.ledger-panel{padding:6px 26px; border-radius:14px; width:100%; max-width:760px;}
+.ledger-row{display:grid; grid-template-columns:1.2fr 1fr 0.7fr 1fr; padding:13px 0; font-size:12.5px; border-bottom:1px solid rgba(255,255,255,0.06); align-items:center;}
+.ledger-row:last-child{border-bottom:none;}
+.ledger-head{color:#C9B98F; font-size:10.5px; letter-spacing:0.04em;}
+.lv-clear{color:var(--champagne);}
+.lv-flag{color:var(--crimson);}
+input[type=range]{
+  -webkit-appearance:none; width:100%; height:2px; background:rgba(255,255,255,0.15); border-radius:2px; outline:none;
+}
+input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; width:15px; height:15px; border-radius:50%; background:var(--gold);
+  box-shadow:0 0 10px rgba(212,175,55,0.6); cursor:pointer;
+}
+.gauge-wrap{display:flex; flex-direction:column; align-items:center; justify-content:center;}
+.verdict{
+  margin-top:18px; padding:8px 22px; border-radius:999px; font-size:12px; font-weight:600; letter-spacing:0.04em;
+  font-family:'IBM Plex Mono',monospace; transition:all .4s ease;
+}
+.verdict.clear{background:rgba(212,175,55,0.12); color:var(--champagne); border:1px solid rgba(212,175,55,0.5);}
+.verdict.flagged{background:rgba(239,68,68,0.12); color:var(--crimson); border:1px solid rgba(239,68,68,0.5);}
+.drivers{margin-top:22px; width:100%;}
+.why-summary{font-family:'Inter',sans-serif; font-size:13px; line-height:1.5; color:#F5E0A3; margin-bottom:10px; text-align:left;}
+.why-row{display:flex; gap:10px; align-items:flex-start; padding:8px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-family:'Inter',sans-serif; font-size:12.5px; line-height:1.5; color:#E4DAC0; text-align:left;}
+.why-dot{flex:0 0 9px; height:9px; border-radius:50%; margin-top:5px;}
+.why-high .why-dot{background:#EF4444; box-shadow:0 0 8px rgba(239,68,68,0.6);}
+.why-med .why-dot{background:#D4AF37; box-shadow:0 0 8px rgba(212,175,55,0.5);}
+.why-low .why-dot{background:#4ADE80; opacity:.8;}
+.driver-row{display:flex; justify-content:space-between; font-size:12px; color:#E4DAC0; padding:6px 0; border-bottom:1px solid rgba(255,255,255,0.05);}
+.sample-row{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:28px;}
+.sample-btn{
+  padding:8px 14px; border-radius:999px; border:1px solid rgba(63,224,232,0.28);
+  background:rgba(255,255,255,0.02); color:#E4DAC0; font-size:10.5px; letter-spacing:0.03em; cursor:pointer;
+  transition:all .2s ease;
+}
+.sample-btn:hover{border-color:var(--cyan); color:#BFF3F6; box-shadow:0 0 14px rgba(63,224,232,0.25);}
+.sample-legit:hover{border-color:var(--green); color:#B7F3D6; box-shadow:0 0 14px rgba(63,191,127,0.25);}
+.sample-fraud:hover{border-color:var(--crimson); color:#FFC9C9; box-shadow:0 0 14px rgba(239,68,68,0.25);}
+.prob{font-size:11px; color:#D8CCAA; margin-top:10px;}
+.ledger-mini{border-top:1px solid rgba(255,255,255,0.08); margin-top:26px; padding-top:4px;}
+.mc-section{width:100%; max-width:720px; margin:48px auto 0; display:flex; flex-direction:column; align-items:stretch;}
+.model-compare{width:100%; max-width:720px; margin:6px auto 0;}
+.mc-legend{display:flex; gap:22px; flex-wrap:wrap; margin-bottom:20px; font-size:11.5px; color:#E4DAC0;}
+.mc-dot{display:inline-block; width:8px; height:8px; border-radius:2px; margin-right:6px; vertical-align:middle;}
+.mc-card{border:1px solid rgba(212,175,55,0.2); border-radius:14px; padding:26px 24px; margin-bottom:26px; background:rgba(14,16,23,0.68); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px); box-shadow:0 8px 32px rgba(0,0,0,0.6);}
+.mc-metric-label{font-size:13px; font-weight:700; color:var(--champagne); letter-spacing:0.08em; margin-bottom:18px;}
+.mc-bar-row{
+  position:relative; display:grid; grid-template-columns:200px 1fr 118px; align-items:center; gap:16px;
+  margin-bottom:18px; font-size:12.5px; color:#E4DAC0;
+}
+.mc-bar-row:last-child{margin-bottom:0;}
+.mc-bar-row.mc-best .mc-bar-name{color:var(--champagne);}
+.mc-bar-row.mc-winner .mc-bar-name{ color:var(--champagne); font-weight:700; }
+.mc-bar-row.mc-winner .mc-bar-val{ color:var(--champagne); font-size:13px; font-weight:600; }
+.mc-badge{
+  display:inline-block; margin-left:8px; padding:2px 8px; border-radius:3px;
+  background:rgba(212,175,55,0.15); border:1px solid rgba(212,175,55,0.4);
+  color:var(--gold); font-size:8.5px; font-weight:700; letter-spacing:0.04em; vertical-align:middle;
+}
+.mc-track{height:20px; border-radius:3px; background:rgba(255,255,255,0.06); overflow:hidden;}
+.mc-winner .mc-track{ box-shadow:inset 0 0 0 1px rgba(212,175,55,0.35), 0 0 18px rgba(212,175,55,0.25); }
+.mc-fill{
+  height:100%; width:0%; border-radius:1px; background:var(--bar-color);
+  transition:width 1.1s cubic-bezier(.22,1,.36,1), filter .2s ease;
+  box-shadow:0 0 10px 0 var(--bar-color);
+}
+.mc-winner .mc-fill{ box-shadow:0 0 20px 2px var(--bar-color); }
+.mc-bar-row:hover .mc-fill{filter:brightness(1.3);}
+.mc-bar-val{text-align:right; font-family:'IBM Plex Mono',monospace; color:var(--gold); white-space:nowrap;}
+.mc-bar-row::after{
+  content:attr(data-tip); position:absolute; right:0; top:-28px;
+  background:#0e1217; border:1px solid rgba(212,175,55,0.3); color:var(--champagne);
+  font-size:10px; font-family:'IBM Plex Mono',monospace; padding:4px 9px; border-radius:6px;
+  opacity:0; pointer-events:none; transform:translateY(4px); transition:all .2s ease; white-space:nowrap;
+}
+.mc-bar-row:hover::after{opacity:1; transform:translateY(0);}
+@media(max-width:640px){ .mc-bar-row{grid-template-columns:1fr; gap:6px;} .mc-bar-val{text-align:left;} .mc-card{padding:20px 16px;} }
+
+/* ===== UI MOTION & POLISH ===== */
+.fx-spot{position:relative; isolation:isolate;}
+.fx-spot::before{
+  content:''; position:absolute; inset:0; border-radius:inherit; pointer-events:none; z-index:-1; opacity:0;
+  background:radial-gradient(380px circle at var(--mx,50%) var(--my,50%), rgba(212,175,55,0.17), transparent 55%);
+  transition:opacity .35s ease;
+}
+.fx-spot:hover::before{opacity:1;}
+.fx-lift{transition:translate .35s cubic-bezier(.22,1,.36,1), border-color .35s ease, box-shadow .35s ease;}
+.fx-lift:hover{translate:0 -5px; border-color:rgba(212,175,55,0.55); box-shadow:0 18px 44px rgba(0,0,0,0.6), 0 0 26px rgba(212,175,55,0.12);}
+.team-row.fx-spot{transition:border-color .25s ease, transform .25s ease, box-shadow .25s ease;}
+.team-row:hover{box-shadow:0 14px 34px rgba(0,0,0,0.6), 0 0 22px rgba(212,175,55,0.12);}
+
+/* buttons: shine sweep + press */
+.log-btn{position:relative; overflow:hidden;}
+.log-btn::after{
+  content:''; position:absolute; top:0; bottom:0; left:-60%; width:40%; pointer-events:none;
+  background:linear-gradient(100deg, transparent, rgba(245,224,163,0.28), transparent); transform:skewX(-20deg);
+}
+.log-btn:hover::after{left:130%; transition:left .7s ease;}
+.log-btn:active, .sample-btn:active{transform:scale(.97);}
+
+/* mc-card scroll reveal */
+.mc-card{opacity:0; transform:translateY(26px); transition:opacity .7s ease, transform .7s cubic-bezier(.22,1,.36,1), translate .35s cubic-bezier(.22,1,.36,1), border-color .35s ease, box-shadow .35s ease;}
+.mc-card.rv{opacity:1; transform:none;}
+
+/* terminal sequence */
+#gaugeArc{transition:stroke-dashoffset .95s cubic-bezier(.22,1,.36,1), stroke .4s ease;}
+.gauge-wrap{position:relative;}
+.gauge-wrap.scanning::after{
+  content:''; position:absolute; left:6%; right:6%; top:0; height:2px; border-radius:2px; pointer-events:none;
+  background:linear-gradient(90deg, transparent, var(--gold), transparent); box-shadow:0 0 14px 2px rgba(212,175,55,0.6);
+  animation:scanline .65s ease-in-out;
+}
+@keyframes scanline{0%{top:0; opacity:0;} 15%{opacity:1;} 85%{opacity:1;} 100%{top:100%; opacity:0;}}
+.verdict.scan{background:rgba(255,255,255,0.04); color:#C9B98F; border:1px solid rgba(255,255,255,0.15); animation:blink .8s ease-in-out infinite;}
+@keyframes blink{50%{opacity:.45;}}
+.why-anim{opacity:0; animation:whyin .5s cubic-bezier(.22,1,.36,1) forwards;}
+@keyframes whyin{from{opacity:0; transform:translateX(-10px);} to{opacity:1; transform:none;}}
+.sim-panel.flash-flag{animation:flashflag 1.1s ease;}
+.sim-panel.flash-clear{animation:flashclear 1.1s ease;}
+@keyframes flashflag{0%,100%{box-shadow:0 8px 32px rgba(0,0,0,0.6);} 30%{box-shadow:0 0 0 1px rgba(239,68,68,0.6), 0 0 46px 4px rgba(239,68,68,0.35);}}
+@keyframes flashclear{0%,100%{box-shadow:0 8px 32px rgba(0,0,0,0.6);} 30%{box-shadow:0 0 0 1px rgba(63,191,127,0.5), 0 0 40px 2px rgba(63,191,127,0.25);}}
+.verdict.flagged.pop{animation:vshake .55s ease;}
+.verdict.clear.pop{animation:vpop .5s ease;}
+@keyframes vshake{0%,100%{transform:translateX(0);} 20%{transform:translateX(-6px);} 40%{transform:translateX(5px);} 60%{transform:translateX(-4px);} 80%{transform:translateX(3px);}}
+@keyframes vpop{0%{transform:scale(.9);} 60%{transform:scale(1.08);} 100%{transform:scale(1);}}
+.ledger-new{animation:ledgerin .7s cubic-bezier(.22,1,.36,1);}
+@keyframes ledgerin{0%{opacity:0; transform:translateY(-14px); background:rgba(212,175,55,0.22);} 100%{opacity:1; transform:none; background:transparent;}}
+
+/* mobile pass */
+@media(max-width:640px){
+  nav{padding:calc(env(safe-area-inset-top,0px) + 14px) 5vw 12px;}
+  nav .status{font-size:10px;}
+  section{padding:8vh 5vw;}
+  .section-tag{font-size:10.5px; letter-spacing:0.08em; padding:8px 14px;}
+  .metrics{gap:26px; margin-top:36px;}
+  .metric .val{font-size:22px;}
+  .split{gap:28px;}
+  .sim-panel{padding:22px 16px;}
+  .telemetry-card{padding:20px;}
+  .mon-big{font-size:18px;}
+  .ledger-row{font-size:11px;}
+  .mc-section{margin-top:36px;}
+}
+@media(hover:none){ .fx-lift:hover{translate:none;} .fx-spot::before{display:none;} }
+
+/* reduced motion */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms !important; animation-iteration-count:1 !important; transition-duration:.001ms !important; scroll-behavior:auto !important;}
+  .mc-card{opacity:1; transform:none;}
+}
+footer{padding:40px 6vw 60px; text-align:center; font-size:11px; color:#B8A878; position:relative; z-index:2;}
+
+/* TEAM */
+.team-list{width:100%; max-width:760px; margin:22px auto 0; display:grid; grid-template-columns:repeat(2,1fr); gap:16px;}
+@media(max-width:640px){ .team-list{grid-template-columns:1fr;} }
+.team-row{
+  display:flex; justify-content:space-between; align-items:center; padding:20px 20px;
+  border-radius:14px; text-decoration:none; position:relative;
+  background:rgba(14,16,23,0.68); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+  border:1px solid rgba(212,175,55,0.2); box-shadow:0 8px 24px rgba(0,0,0,0.5);
+  transition:border-color .25s ease, transform .25s ease;
+}
+.team-row:hover{border-color:var(--gold); transform:translateY(-3px);}
+.tr-name{font-weight:600; font-size:15px; color:var(--titanium); transition:color .25s ease;}
+.team-row:hover .tr-name{color:var(--champagne);}
+.tr-role{font-size:11px; color:#E4DAC0; letter-spacing:0.04em;}
+.team-float{
+  position:fixed; left:0; top:0; z-index:60; pointer-events:none; opacity:0;
+  display:flex; align-items:center; gap:12px; padding:10px 18px 10px 10px; border-radius:14px;
+  background:rgba(20,16,32,0.9); backdrop-filter:blur(10px); border:1px solid rgba(212,175,55,0.35);
+  box-shadow:0 10px 30px rgba(0,0,0,0.55); filter:url(#goldNoise);
+  transition:opacity .2s ease; transform:translate(-50%,-125%);
+}
+.team-float.show{opacity:1;}
+.tf-avatar{
+  width:38px; height:38px; border-radius:50%; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+  background:radial-gradient(circle at 35% 30%, #F5E0A3, #D4AF37 60%, #99792E 100%);
+  color:#3a2f0f; font-family:'Anton',sans-serif; font-size:13px;
+}
+.tf-name{font-family:'Inter',sans-serif; font-weight:600; font-size:13px; color:var(--champagne);}
+.tf-link{font-size:9.5px; color:var(--cyan); margin-top:2px; font-family:'IBM Plex Mono',monospace; letter-spacing:0.03em;}
+</style>
+</head>
+<body>
+<canvas id="bgcanvas"></canvas>
+<svg width="0" height="0" style="position:absolute">
+  <filter id="goldNoise">
+    <feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="2" stitchTiles="stitch" />
+    <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.35 0" />
+    <feComposite in2="SourceGraphic" operator="in" result="noise" />
+    <feBlend in="SourceGraphic" in2="noise" mode="multiply" />
+  </filter>
+</svg>
+
+<div class="coin-wrap" id="coinWrap">
+  <div class="coin" id="coin">
+    <div class="coin-face coin-front"><span class="coin-fs">FS</span></div>
+    <div class="coin-face coin-back"><span class="coin-fs">FS</span></div>
+  </div>
+</div>
+<div class="laser-emitter" id="laserEmitter"></div>
+<div class="laser-wrap" id="laserWrap"><div class="laser-beam"></div></div>
+
+<nav>
+  <div class="logo">FRAUD <span>SHIELD</span></div>
+  <div class="nav-links mono">
+    <a href="#problem">Problem</a>
+    <a href="#trymodel">Try Model</a>
+    <a href="#howitworks">How It Works</a>
+    <a href="#final">Team</a>
+  </div>
+  <div class="status"><span class="pulse"></span>SYSTEM ARMED</div>
+</nav>
+
+<div class="wrap">
+
+<section id="hero">
+  <div class="badge mono">◆ v3.4 REAL-TIME ML ENGINE</div>
+  <h1 class="gold-grad brand-font" style="letter-spacing:0.01em;">FRAUD SHIELD</h1>
+  <p class="hero-sub">AI-powered fraud detection that analyzes transactions in milliseconds and explains the risk behind every decision.</p>
+  <div class="metrics mono">
+    <div class="metric"><div class="val">99.8%</div><div class="lbl">TRANSACTIONS ANALYZED</div></div>
+    <div class="metric"><div class="val">REAL-TIME</div><div class="lbl">FRAUD DETECTION</div></div>
+    <div class="metric"><div class="val">AI-POWERED</div><div class="lbl">RISK ANALYSIS</div></div>
+  </div>
+  <div class="scroll-cue mono"><div class="scroll-line"></div>DESCEND</div>
+</section>
+
+<section id="problem">
+  <div class="eyebrow-inline section-tag mono">THE PROBLEM</div>
+  <h2>0.17% hides inside 99.83%.</h2>
+  <p class="body-text">Fraud doesn't announce itself — it hides inside a lattice of billions of ordinary transfers, indistinguishable at a glance. A model tuned for accuracy alone would call every transaction safe and still be right 99.8% of the time. Fraud Shield is built for the fraction that matters: the needle, not the haystack.</p>
+  <div class="split" style="margin-top:20px;">
+    <div class="mono" style="display:flex; flex-direction:column; gap:26px;">
+      <div class="metric"><div class="val">0.17%</div><div class="lbl">DATASET FRAUD RATE</div></div>
+      <div class="metric"><div class="val">5</div><div class="lbl">TRANSACTION SIGNALS</div></div>
+      <div class="metric"><div class="val">REAL-TIME</div><div class="lbl">ML PREDICTION</div></div>
+    </div>
+    <div class="glass telemetry-card mono">
+      <div class="eyebrow-inline section-tag sm mono">AI RISK MONITOR</div>
+      <div class="mon-status"><span class="pulse"></span>MODEL ONLINE</div>
+      <div class="mon-sub">SIGNAL ANALYSIS</div>
+      <div class="telemetry-row"><span class="k">AMOUNT PATTERN</span><span class="sig-dot"></span></div>
+      <div class="telemetry-row"><span class="k">BALANCE BEHAVIOR</span><span class="sig-dot"></span></div>
+      <div class="telemetry-row"><span class="k">TRANSACTION TYPE</span><span class="sig-dot"></span></div>
+      <div class="telemetry-row"><span class="k">TIME PATTERN</span><span class="sig-dot"></span></div>
+      <div class="mon-footer"><div class="mon-big">REAL-TIME</div><div class="mon-lbl">RISK ANALYSIS</div></div>
+    </div>
+  </div>
+</section>
+
+<section id="trymodel">
+  <div class="eyebrow-inline section-tag mono">★ TRY THE MODEL</div>
+  <h2 style="margin-bottom:8px;">Shield Terminal</h2>
+  <p class="body-text" style="margin-bottom:0;">Load a sample, or enter your own transaction. Watch the probability, gauge, and explanation update live.</p>
+  <div class="glass sim-panel" style="margin-top:30px;">
+    <div class="sample-row mono">
+      <button type="button" class="sample-btn sample-legit" data-type="TRANSFER" data-amt="250" data-sb="5000" data-rb="3200" data-time="14:30">SAMPLE LEGIT</button>
+      <button type="button" class="sample-btn sample-fraud" data-type="CASH_OUT" data-amt="9800" data-sb="10000" data-rb="0" data-time="02:15">SAMPLE FRAUD</button>
+    </div>
+    <form id="riskForm" class="sim-grid">
+      <div class="form-col">
+        <div class="field-group">
+          <label for="txType">TRANSACTION TYPE</label>
+          <select id="txType">
+            <option value="TRANSFER">Transfer</option>
+            <option value="CASH_OUT">Cash Out</option>
+          </select>
+          <div class="field-help">How the funds are moving out of the sender's account.</div>
+        </div>
+        <div class="field-group">
+          <label for="txAmt">TRANSACTION AMOUNT (₹)</label>
+          <input type="text" inputmode="decimal" id="txAmt" value="₹1,200" aria-describedby="txAmtHelp">
+          <div class="field-help" id="txAmtHelp">Amount being sent, in rupees. Min ₹1 · Max ₹1,000,000.</div>
+          <div class="field-error" id="txAmtErr"></div>
+        </div>
+        <div class="field-group">
+          <label for="txSB">SENDER STARTING BALANCE (₹)</label>
+          <input type="text" inputmode="decimal" id="txSB" value="₹5,000" aria-describedby="txSBHelp">
+          <div class="field-help" id="txSBHelp">Sender's account balance right before this transaction.</div>
+          <div class="field-error" id="txSBErr"></div>
+        </div>
+        <div class="field-group">
+          <label for="txRB">RECIPIENT STARTING BALANCE (₹)</label>
+          <input type="text" inputmode="decimal" id="txRB" value="₹3,200" aria-describedby="txRBHelp">
+          <div class="field-help" id="txRBHelp">Recipient's account balance right before this transaction.</div>
+          <div class="field-error" id="txRBErr"></div>
+        </div>
+        <div class="field-group">
+          <label for="txTime">TRANSACTION TIME</label>
+          <input type="time" id="txTime" value="14:30">
+          <div class="field-help">Time of day the transaction was initiated.</div>
+        </div>
+        <button type="submit" class="log-btn mono" style="margin-top:6px;">EVALUATE TRANSACTION</button>
+      </div>
+      <div class="gauge-wrap">
+        <svg width="180" height="180" viewBox="0 0 180 180">
+          <circle cx="90" cy="90" r="76" fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="10"/>
+          <circle id="gaugeArc" cx="90" cy="90" r="76" fill="none" stroke="#D4AF37" stroke-width="10"
+            stroke-linecap="round" stroke-dasharray="477.5" stroke-dashoffset="477.5"
+            transform="rotate(-90 90 90)"/>
+          <text id="gaugeNum" x="90" y="98" text-anchor="middle" font-family="IBM Plex Mono" font-size="30" fill="#F5E0A3" font-weight="600">0%</text>
+        </svg>
+        <div class="verdict clear mono" id="verdict">CLEARED</div>
+        <div class="prob mono" id="probLine">RISK PROBABILITY: 0%</div>
+        <div class="eyebrow-inline section-tag sm mono" style="margin-top:22px; align-self:center;">WHY THIS RESULT</div>
+        <div class="drivers mono" id="drivers"></div>
+      </div>
+    </form>
+    <button id="logBtn" class="log-btn mono">LOG TRANSACTION</button>
+    <div class="ledger-mini">
+      <div class="eyebrow-inline section-tag sm mono">RECENT ATTEMPTS</div>
+      <div id="ledgerBody" class="mono"></div>
+    </div>
+  </div>
+</section>
+
+<section id="howitworks">
+  <div class="eyebrow-inline section-tag mono">HOW AI WORKS</div>
+  <h2>Data → Features → ML → Prediction.</h2>
+  <p class="body-text">Every transaction is decomposed into a handful of signals, then scored by an ensemble of models. Three of the strongest signals:</p>
+  <div class="signal-grid">
+    <div class="glass signal-card">
+      <span class="signal-name">Spending Speed</span>
+      <span class="signal-desc">How fast money is moving compared to this account's usual hourly pattern.</span>
+    </div>
+    <div class="glass signal-card">
+      <span class="signal-name">Location Mismatch</span>
+      <span class="signal-desc">Whether the claimed location is physically possible given recent activity.</span>
+    </div>
+    <div class="glass signal-card">
+      <span class="signal-name">Unusual Amount</span>
+      <span class="signal-desc">How far this transaction is from the account's typical size.</span>
+    </div>
+  </div>
+
+  <div class="mc-section">
+  <div class="eyebrow-inline section-tag mono">MODEL COMPARISON</div>
+  <div class="mc-legend mono">
+    <span><i class="mc-dot" style="background:#E4DAC0"></i>Logistic Regression</span>
+    <span><i class="mc-dot" style="background:#D4AF37; box-shadow:0 0 8px rgba(212,175,55,0.6);"></i>Random Forest 🏆</span>
+    <span><i class="mc-dot" style="background:#99792E"></i>XGBoost</span>
+  </div>
+  <p class="body-text" style="font-size:12.5px; margin-bottom:26px;">Benchmarked on held-out fraud cases. <strong style="color:var(--champagne);">Random Forest is the production model</strong> — best precision, recall, and F1, and statistically tied for best ROC-AUC.</p>
+  <div class="model-compare">
+    <div class="mc-metric mc-card">
+      <div class="mc-metric-label mono">PRECISION (FRAUD)</div>
+      <div class="mc-bar-row" data-pct="89.86" data-tip="0.8986" style="--bar-color:#E4DAC0"><span class="mc-bar-name mono">Logistic Regression</span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.8986 (89.86%)</span></div>
+      <div class="mc-bar-row mc-winner" data-pct="99.83" data-tip="0.9983 — winner" style="--bar-color:#D4AF37"><span class="mc-bar-name mono">Random Forest <span class="mc-badge">🏆 WINNER</span></span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9983 (99.83%)</span></div>
+      <div class="mc-bar-row" data-pct="98.45" data-tip="0.9845" style="--bar-color:#99792E"><span class="mc-bar-name mono">XGBoost</span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9845 (98.45%)</span></div>
+    </div>
+    <div class="mc-metric mc-card">
+      <div class="mc-metric-label mono">RECALL (FRAUD)</div>
+      <div class="mc-bar-row" data-pct="42.83" data-tip="0.4283 — misses over half of fraud" style="--bar-color:#E4DAC0"><span class="mc-bar-name mono">Logistic Regression</span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.4283 (42.83%)</span></div>
+      <div class="mc-bar-row mc-winner" data-pct="98.96" data-tip="0.9896 — winner" style="--bar-color:#D4AF37"><span class="mc-bar-name mono">Random Forest <span class="mc-badge">🏆 WINNER</span></span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9896 (98.96%)</span></div>
+      <div class="mc-bar-row" data-pct="98.62" data-tip="0.9862" style="--bar-color:#99792E"><span class="mc-bar-name mono">XGBoost</span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9862 (98.62%)</span></div>
+    </div>
+    <div class="mc-metric mc-card">
+      <div class="mc-metric-label mono">F1-SCORE (FRAUD)</div>
+      <div class="mc-bar-row" data-pct="58.01" data-tip="0.5801" style="--bar-color:#E4DAC0"><span class="mc-bar-name mono">Logistic Regression</span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.5801 (58.01%)</span></div>
+      <div class="mc-bar-row mc-winner" data-pct="99.39" data-tip="0.9939 — winner" style="--bar-color:#D4AF37"><span class="mc-bar-name mono">Random Forest <span class="mc-badge">🏆 WINNER</span></span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9939 (99.39%)</span></div>
+      <div class="mc-bar-row" data-pct="98.53" data-tip="0.9853" style="--bar-color:#99792E"><span class="mc-bar-name mono">XGBoost</span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9853 (98.53%)</span></div>
+    </div>
+    <div class="mc-metric mc-card">
+      <div class="mc-metric-label mono">ROC-AUC</div>
+      <div class="mc-bar-row" data-pct="97.49" data-tip="0.9749" style="--bar-color:#E4DAC0"><span class="mc-bar-name mono">Logistic Regression</span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9749 (97.49%)</span></div>
+      <div class="mc-bar-row mc-winner" data-pct="99.48" data-tip="0.9948 — 0.0002 behind XGBoost, statistical tie" style="--bar-color:#D4AF37"><span class="mc-bar-name mono">Random Forest <span class="mc-badge">🏆 WINNER</span></span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9948 (99.48%)</span></div>
+      <div class="mc-bar-row mc-best" data-pct="99.50" data-tip="0.9950 — narrowly highest" style="--bar-color:#99792E"><span class="mc-bar-name mono">XGBoost</span><div class="mc-track"><div class="mc-fill"></div></div><span class="mc-bar-val mono">0.9950 (99.50%)</span></div>
+    </div>
+  </div>
+  <p class="body-text" style="margin-top:8px; font-size:11px; color:#C9B98F;">Logistic Regression's low recall means it misses most fraud — included as a baseline, not a candidate.</p>
+  <p class="body-text" style="margin-top:16px; font-size:12.5px; color:#C9B98F;">Limitations: these numbers were measured on a held-out, historically-skewed dataset — real fraud patterns drift over time, and precision this high will not hold indefinitely without retraining.</p>
+  </div>
+</section>
+
+<section id="final">
+  <div class="glass" style="width:100%; max-width:720px; padding:52px 40px; border-radius:20px; text-align:center;">
+    <div class="eyebrow-inline section-tag mono">OPEN SOURCE · COLLEGE PROJECT</div>
+    <h2 style="margin:18px auto 14px; max-width:none;">See it. Fork it. Break it.</h2>
+    <p class="body-text" style="margin:0 auto 30px; text-align:center; max-width:44ch;">Fraud Shield is a machine-learning fraud-detection project — full source, model notebooks, and this site included.</p>
+    <div style="display:flex; gap:14px; justify-content:center; flex-wrap:wrap; margin-bottom:34px;">
+      <a href="https://github.com/siddharth-meka-16" class="log-btn mono" style="width:auto; padding:13px 26px; text-decoration:none; display:inline-block;">VIEW ON GITHUB</a>
+      <a href="#trymodel" class="log-btn mono" style="width:auto; padding:13px 26px; text-decoration:none; display:inline-block; border-color:rgba(255,255,255,0.15); color:var(--titanium);">TRY THE MODEL AGAIN</a>
+    </div>
+  </div>
+
+  <div class="eyebrow-inline section-tag mono" style="margin-top:52px; align-self:center;">THE TEAM</div>
+  <div class="team-list mono" id="teamList"></div>
+</section>
+
+<div class="team-float" id="teamFloat">
+  <div class="tf-avatar" id="tfAvatar">SM</div>
+  <div>
+    <div class="tf-name" id="tfName">@siddharth-meka-16</div>
+    <div class="tf-link">↗ VIEW GITHUB</div>
+  </div>
+</div>
+
+</div>
+
+<footer class="mono">FRAUD SHIELD</footer>
+
+<script>
+const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const FINE_POINTER = window.matchMedia('(hover:hover) and (pointer:fine)').matches;
+let mouseNX = 0, mouseNY = 0;   // normalized -1..1
+window.addEventListener('pointermove', e=>{
+  mouseNX = (e.clientX / window.innerWidth) * 2 - 1;
+  mouseNY = (e.clientY / window.innerHeight) * 2 - 1;
+});
+/* ---------- THREE.JS BACKGROUND ---------- */
+const canvas = document.getElementById('bgcanvas');
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 100);
+camera.position.z = 7;
+const renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio,2));
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+const COUNT = 2600;
+const geo = new THREE.BufferGeometry();
+const positions = new Float32Array(COUNT*3);
+const spherePos = new Float32Array(COUNT*3);
+const gridPos = new Float32Array(COUNT*3);
+const cagePos = new Float32Array(COUNT*3);
+const colors = new Float32Array(COUNT*3);
+const baseColor = new THREE.Color('#D4AF37');
+const amberColor = new THREE.Color('#E65C00');
+
+function fibSphere(i, n, r){
+  const gA = Math.PI*(3-Math.sqrt(5));
+  const y = 1 - (i/(n-1))*2;
+  const rad = Math.sqrt(1-y*y);
+  const theta = gA*i;
+  return [Math.cos(theta)*rad*r, y*r, Math.sin(theta)*rad*r];
+}
+const gridN = Math.ceil(Math.cbrt(COUNT));
+let gi=0;
+for(let i=0;i<COUNT;i++){
+  const [sx,sy,sz] = fibSphere(i, COUNT, 3.1);
+  spherePos[i*3]=sx; spherePos[i*3+1]=sy; spherePos[i*3+2]=sz;
+
+  const gx = (gi%gridN); const gy = Math.floor(gi/gridN)%gridN; const gz = Math.floor(gi/(gridN*gridN));
+  gi++;
+  gridPos[i*3]   = (gx-gridN/2)*1.1;
+  gridPos[i*3+1] = (gy-gridN/2)*1.1;
+  gridPos[i*3+2] = (gz-gridN/2)*1.1;
+
+  const angle = (i/COUNT)*Math.PI*8;
+  const cr = 2.6 + Math.sin(angle*3)*0.3;
+  cagePos[i*3]   = Math.cos(angle)*cr;
+  cagePos[i*3+1] = Math.sin(i*0.37)*3;
+  cagePos[i*3+2] = Math.sin(angle)*cr;
+
+  positions[i*3]=sx; positions[i*3+1]=sy; positions[i*3+2]=sz;
+  baseColor.toArray(colors, i*3);
+}
+geo.setAttribute('position', new THREE.BufferAttribute(positions,3));
+geo.setAttribute('color', new THREE.BufferAttribute(colors,3));
+
+const mat = new THREE.PointsMaterial({
+  size:0.045, vertexColors:true, transparent:true, opacity:0.85,
+  blending:THREE.AdditiveBlending, depthWrite:false
+});
+const points = new THREE.Points(geo, mat);
+scene.add(points);
+
+function lerpArr(a,b,t,out){
+  for(let i=0;i<a.length;i++) out[i] = a[i] + (b[i]-a[i])*t;
+}
+const tmp = new Float32Array(COUNT*3);
+const posAttr = geo.attributes.position;
+const colAttr = geo.attributes.color;
+
+let scrollProgress = 0;
+function updateParticles(){
+  // stage: 0 sphere -> 0.25 fracture(sphere,tinted) -> 0.5 grid -> 0.75 cage -> 1 pullback(cage,blur)
+  const p = scrollProgress;
+  let from, to, t;
+  if(p < 0.25){ from=spherePos; to=spherePos; t=0; }
+  else if(p < 0.5){ from=spherePos; to=gridPos; t=(p-0.25)/0.25; }
+  else if(p < 0.75){ from=gridPos; to=cagePos; t=(p-0.5)/0.25; }
+  else { from=cagePos; to=cagePos; t=0; }
+  lerpArr(from, to, t, tmp);
+  posAttr.array.set(tmp);
+  posAttr.needsUpdate = true;
+
+  const fractureAmt = p>0.12 && p<0.4 ? Math.min(1,(p-0.12)/0.15) * (1-Math.max(0,(p-0.35)/0.05)) : 0;
+  for(let i=0;i<COUNT;i++){
+    const isRogue = i % 37 === 0;
+    const c = isRogue && p>0.15 && p<0.55 ? amberColor : baseColor;
+    c.toArray(tmp, 0);
+    colAttr.array[i*3]=tmp[0]; colAttr.array[i*3+1]=tmp[1]; colAttr.array[i*3+2]=tmp[2];
+  }
+  colAttr.needsUpdate = true;
+
+  points.rotation.y = p * Math.PI * 1.6;
+  camera.position.z = 7 - p*2.2;
+  camera.position.y = p * -0.6;
+}
+
+let clock = new THREE.Clock();
+function animate(){
+  requestAnimationFrame(animate);
+  points.rotation.y += 0.0006;
+  if(!REDUCED){
+    // cursor parallax: gentle tilt + camera drift, eased
+    points.rotation.x += ((mouseNY * 0.16) - points.rotation.x) * 0.04;
+    camera.position.x += ((mouseNX * 0.45) - camera.position.x) * 0.04;
+  }
+  renderer.render(scene, camera);
+}
+animate();
+
+window.addEventListener('resize', ()=>{
+  camera.aspect = window.innerWidth/window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+/* ---------- SCROLL DRIVEN STATE ---------- */
+gsap.registerPlugin(ScrollTrigger);
+
+/* ---------- GOLD COIN + LASER TRACKING ---------- */
+const coinWrap = document.getElementById('coinWrap');
+const coinEl = document.getElementById('coin');
+const laserWrap = document.getElementById('laserWrap');
+const laserEmitter = document.getElementById('laserEmitter');
+function coinCenterX(){ return window.innerWidth<=640 ? 26 : 38; }
+function updateCoin(p){
+  const margin = 20;
+  const coinSize = coinWrap.offsetWidth;
+  const travel = window.innerHeight - coinSize - margin*2;
+  const y = margin + p*travel;
+  const eased = 1 - Math.pow(1-p, 3);   // decelerates into the settle
+  const angle = eased * 9 * 360;        // 9 full flips, lands on a multiple of 360 (face-up)
+  coinWrap.style.transform = `translateY(${y}px)`;
+  coinEl.style.transform = `rotateY(${angle}deg)`;
+
+  const cx = coinCenterX();
+  laserWrap.style.left = cx+'px';
+  laserEmitter.style.left = cx+'px';
+  laserWrap.style.transform = `scaleY(${(y + coinSize/2) / window.innerHeight})`;
+}
+updateCoin(0);
+ScrollTrigger.create({
+  trigger: document.body,
+  start:'top top',
+  end:'bottom bottom',
+  onUpdate: self => { scrollProgress = self.progress; updateParticles(); updateCoin(self.progress); }
+});
+
+if(!REDUCED) gsap.utils.toArray('section').forEach(sec=>{
+  gsap.fromTo(sec.querySelectorAll('h2, .body-text, .glass, .badge, h1, .hero-sub, .metrics'),
+    {opacity:0, y:24},
+    {opacity:1, y:0, duration:0.9, ease:'power2.out', stagger:0.06,
+      scrollTrigger:{trigger:sec, start:'top 75%'}}
+  );
+});
+
+/* ---------- RISK SIMULATOR ---------- */
+const txType=document.getElementById('txType'), txAmt=document.getElementById('txAmt'),
+      txSB=document.getElementById('txSB'), txRB=document.getElementById('txRB'), txTime=document.getElementById('txTime');
+const gaugeArc=document.getElementById('gaugeArc'), gaugeNum=document.getElementById('gaugeNum');
+const verdictEl=document.getElementById('verdict'), driversEl=document.getElementById('drivers');
+const riskForm=document.getElementById('riskForm');
+const CIRC = 477.5;
+
+function clamp(v,min,max){ return Math.min(max, Math.max(min, v)); }
+function parseCurrency(v){ const n=+String(v).replace(/[^0-9.\-]/g,''); return isNaN(n) ? 0 : n; }
+function formatCurrency(n){ return '₹'+n.toLocaleString('en-US', {maximumFractionDigits:0}); }
+
+function setupCurrencyField(el, min, max){
+  el.addEventListener('focus', ()=>{ el.value = parseCurrency(el.value) || ''; });
+  el.addEventListener('blur', ()=>{
+    let n = clamp(parseCurrency(el.value), min, max);
+    el.value = formatCurrency(n);
+    validateFields();
+  });
+  el.addEventListener('input', ()=>renderSim());
+}
+setupCurrencyField(txAmt, 1, 1000000);
+setupCurrencyField(txSB, 0, 10000000);
+setupCurrencyField(txRB, 0, 10000000);
+[txType, txTime].forEach(el=>el.addEventListener('input', ()=>renderSim()));
+
+function validateFields(){
+  let ok = true;
+  const amt = parseCurrency(txAmt.value);
+  const amtErr = document.getElementById('txAmtErr');
+  if(amt < 1){ amtErr.textContent='Amount must be at least ₹1.'; txAmt.classList.add('invalid'); ok=false; }
+  else if(amt > 1000000){ amtErr.textContent='Amount cannot exceed ₹1,000,000.'; txAmt.classList.add('invalid'); ok=false; }
+  else { amtErr.textContent=''; txAmt.classList.remove('invalid'); }
+
+  const sb = parseCurrency(txSB.value);
+  const sbErr = document.getElementById('txSBErr');
+  if(sb < 0){ sbErr.textContent='Balance cannot be negative.'; txSB.classList.add('invalid'); ok=false; }
+  else { sbErr.textContent=''; txSB.classList.remove('invalid'); }
+
+  const rb = parseCurrency(txRB.value);
+  const rbErr = document.getElementById('txRBErr');
+  if(rb < 0){ rbErr.textContent='Balance cannot be negative.'; txRB.classList.add('invalid'); ok=false; }
+  else { rbErr.textContent=''; txRB.classList.remove('invalid'); }
+
+  return ok;
+}
+
+function computeRisk(){
+  const amt = parseCurrency(txAmt.value);
+  const sb = parseCurrency(txSB.value);
+  const rb = parseCurrency(txRB.value);
+  const hour = txTime.value ? +txTime.value.split(':')[0] : 12;
+  const type = txType.value;
+
+  const depletionScore = clamp(amt / (sb + 1), 0, 1);
+  const destScore = amt > 0 ? clamp(1 - rb/(amt + 1), 0, 1) : 0;
+  const timeScore = (hour < 5 || hour >= 23) ? 1 : (hour < 7 ? 0.5 : 0);
+  const typeScore = type === 'CASH_OUT' ? 0.15 : 0.05;
+
+  const risk = clamp(depletionScore*0.4 + destScore*0.35 + timeScore*0.15 + typeScore, 0, 1);
+  return {risk, depletionScore, destScore, timeScore};
+}
+
+function renderSim(animated){
+  animated = (animated === true) && !REDUCED;
+  const {risk, depletionScore, destScore, timeScore} = computeRisk();
+  const pct = Math.round(risk*100);
+  gaugeArc.style.strokeDashoffset = CIRC - CIRC*risk;
+  gaugeArc.style.stroke = risk>0.55 ? '#EF4444' : '#D4AF37';
+  setGaugeNum(pct, animated);
+  gaugeNum.setAttribute('fill', risk>0.55 ? '#EF4444' : '#F5E0A3');
+  document.getElementById('probLine').textContent = 'RISK PROBABILITY: '+pct+'%';
+  if(risk>0.55){
+    verdictEl.textContent='FLAGGED';
+    verdictEl.className='verdict flagged mono';
+  } else {
+    verdictEl.textContent='CLEARED';
+    verdictEl.className='verdict clear mono';
+  }
+  const amtV = parseCurrency(txAmt.value), sbV = parseCurrency(txSB.value);
+  const used = Math.round(clamp(amtV/(sbV+1),0,1)*100);
+  const reasons=[];
+  // sender balance
+  if(depletionScore>=0.8) reasons.push({lvl:2, t:`Most of the sender's balance (${used}%) is being moved in one go.`});
+  else if(depletionScore>=0.4) reasons.push({lvl:1, t:`A large share of the sender's balance (${used}%) is being moved.`});
+  else reasons.push({lvl:0, t:`The amount is small compared with the sender's balance.`});
+  // recipient balance
+  if(destScore>=0.7) reasons.push({lvl:2, t:`The receiving account holds very little compared with the amount sent.`});
+  else if(destScore>=0.3) reasons.push({lvl:1, t:`The receiving account is fairly low for an amount this size.`});
+  else reasons.push({lvl:0, t:`The receiving account's balance looks normal for this amount.`});
+  // time of day
+  if(timeScore>=1) reasons.push({lvl:2, t:`Sent late at night or in the early hours, when fraud is more common.`});
+  else if(timeScore>0) reasons.push({lvl:1, t:`Sent early in the morning, which is slightly unusual.`});
+  else reasons.push({lvl:0, t:`Sent at a normal time of day.`});
+  // type
+  if(txType.value==='CASH_OUT') reasons.push({lvl:1, t:`Cash-outs move money out of the system, so they are watched more closely than transfers.`});
+  reasons.sort((a,b)=>b.lvl-a.lvl);
+  const flagged = reasons.filter(r=>r.lvl>0).length;
+  const summary = risk>0.55
+    ? 'Flagged because of the warning signs below.'
+    : (flagged ? 'Cleared, but a few things were worth a look.' : 'Cleared. Nothing unusual about this transaction.');
+  const cls=['why-low','why-med','why-high'];
+  driversEl.innerHTML = `<div class="why-summary">${summary}</div>` +
+    reasons.map((r,i)=>`<div class="why-row ${cls[r.lvl]}${animated?' why-anim':''}" style="${animated?`animation-delay:${280+i*140}ms`:''}"><span class="why-dot"></span><span>${r.t}</span></div>`).join('');
+  if(animated) flashResult(risk>0.55);
+}
+
+let gaugeRaf = 0;
+function setGaugeNum(pct, animate){
+  cancelAnimationFrame(gaugeRaf);
+  if(!animate){ gaugeNum.textContent = pct+'%'; return; }
+  const t0 = performance.now(), dur = 950;
+  (function step(now){
+    const k = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-k,3);
+    gaugeNum.textContent = Math.round(pct*e)+'%';
+    if(k<1) gaugeRaf = requestAnimationFrame(step);
+  })(t0);
+}
+function flashResult(flagged){
+  const panel = document.querySelector('.sim-panel');
+  panel.classList.remove('flash-flag','flash-clear');
+  verdictEl.classList.remove('pop');
+  void panel.offsetWidth;
+  panel.classList.add(flagged?'flash-flag':'flash-clear');
+  verdictEl.classList.add('pop');
+  setTimeout(()=>{ panel.classList.remove('flash-flag','flash-clear'); verdictEl.classList.remove('pop'); }, 1200);
+}
+let analyzeToken = 0;
+function analyze(){
+  if(REDUCED){ renderSim(); return; }
+  const token = ++analyzeToken;
+  const gw = document.querySelector('.gauge-wrap');
+  gw.classList.remove('scanning'); void gw.offsetWidth; gw.classList.add('scanning');
+  verdictEl.textContent = 'ANALYZING…';
+  verdictEl.className = 'verdict scan mono';
+  document.getElementById('probLine').textContent = 'RISK PROBABILITY: …';
+  driversEl.innerHTML = '';
+  gaugeArc.style.strokeDashoffset = CIRC;
+  cancelAnimationFrame(gaugeRaf);
+  gaugeNum.textContent = '0%';
+  setTimeout(()=>{
+    if(token !== analyzeToken) return;
+    gw.classList.remove('scanning');
+    renderSim(true);
+  }, 650);
+}
+validateFields();
+renderSim();
+
+riskForm.addEventListener('submit', e=>{
+  e.preventDefault();
+  if(validateFields()) analyze();
+});
+
+document.querySelectorAll('.sample-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    txType.value = btn.dataset.type;
+    txAmt.value = formatCurrency(+btn.dataset.amt);
+    txSB.value = formatCurrency(+btn.dataset.sb);
+    txRB.value = formatCurrency(+btn.dataset.rb);
+    txTime.value = btn.dataset.time;
+    validateFields();
+    analyze();
+  });
+});
+
+/* ---------- TEAM ---------- */
+const team = [
+  {name:'Siddharth Meka', role:'Builder & ML Engineer', gh:'siddharth-meka-16'},
+  {name:'Teammate Two', role:'Role Here', gh:'github-username-2'},
+  {name:'Teammate Three', role:'Role Here', gh:'github-username-3'},
+  {name:'Teammate Four', role:'Role Here', gh:'github-username-4'}
+];
+const teamListEl = document.getElementById('teamList');
+teamListEl.innerHTML = team.map(m=>`
+  <a class="team-row" href="https://github.com/${m.gh}" target="_blank" rel="noopener"
+     data-name="${m.name}" data-gh="${m.gh}">
+    <span class="tr-name">${m.name}</span>
+    <span class="tr-role">${m.role}</span>
+  </a>`).join('');
+
+const teamFloat = document.getElementById('teamFloat');
+const tfAvatar = document.getElementById('tfAvatar');
+const tfName = document.getElementById('tfName');
+let tMouseX=0, tMouseY=0, tFloatX=0, tFloatY=0;
+document.addEventListener('mousemove', e=>{ tMouseX=e.clientX; tMouseY=e.clientY; });
+document.querySelectorAll('.team-row').forEach(row=>{
+  row.addEventListener('mouseenter', ()=>{
+    teamFloat.classList.add('show');
+    tfAvatar.textContent = row.dataset.name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    tfName.textContent = '@'+row.dataset.gh;
+  });
+  row.addEventListener('mouseleave', ()=> teamFloat.classList.remove('show'));
+});
+(function floatLoop(){
+  tFloatX += (tMouseX-tFloatX)*0.18;
+  tFloatY += (tMouseY-tFloatY)*0.18;
+  teamFloat.style.transform = `translate(${tFloatX}px, ${tFloatY}px) translate(-50%,-125%)`;
+  requestAnimationFrame(floatLoop);
+})();
+const mcTimers = new WeakMap();
+function fmtMc(pct){ return (pct/100).toFixed(4)+' ('+pct.toFixed(2)+'%)'; }
+function animateMcBar(row, delay){
+  const fill = row.querySelector('.mc-fill'), val = row.querySelector('.mc-bar-val');
+  const target = parseFloat(row.dataset.pct);
+  clearTimeout(mcTimers.get(row));
+  mcTimers.set(row, setTimeout(()=>{
+    fill.style.width = target+'%';
+    if(REDUCED){ val.textContent = fmtMc(target); return; }
+    const t0 = performance.now(), dur = 1100;
+    (function step(now){
+      const k = Math.min(1,(now-t0)/dur), e = 1-Math.pow(1-k,3);
+      val.textContent = fmtMc(target*e);
+      if(k<1) requestAnimationFrame(step); else val.textContent = fmtMc(target);
+    })(t0);
+  }, delay));
+}
+function resetMcBar(row){
+  clearTimeout(mcTimers.get(row));
+  row.querySelector('.mc-fill').style.width = '0%';
+}
+const mcObserver = new IntersectionObserver((entries)=>{
+  entries.forEach(entry=>{
+    const card = entry.target;
+    const bars = card.querySelectorAll('.mc-bar-row');
+    if(entry.isIntersecting){
+      card.classList.add('rv');
+      bars.forEach((row,i)=> animateMcBar(row, 250 + i*140));
+    } else {
+      card.classList.remove('rv');
+      bars.forEach(resetMcBar);
+    }
+  });
+}, {threshold:0.3});
+document.querySelectorAll('.mc-metric').forEach(m=>mcObserver.observe(m));
+
+/* ---------- LEDGER (RECENT ATTEMPTS) ---------- */
+let ledger = [
+  {id:'TX-88213', amt:920,   risk:0.12, verdict:'CLEARED'},
+  {id:'TX-88214', amt:14200, risk:0.71, verdict:'FLAGGED'},
+  {id:'TX-88215', amt:340,   risk:0.08, verdict:'CLEARED'}
+];
+let txCounter = 88216;
+function renderLedger(isNew){
+  const body=document.getElementById('ledgerBody');
+  body.innerHTML = ledger.slice(0,4).map((l,i)=>`
+    <div class="ledger-row${isNew && i===0 ? ' ledger-new' : ''}">
+      <span>${l.id}</span>
+      <span>₹${l.amt.toLocaleString()}</span>
+      <span style="color:${l.verdict==='FLAGGED'?'#EF4444':'#D4AF37'}">${Math.round(l.risk*100)}%</span>
+      <span class="${l.verdict==='FLAGGED'?'lv-flag':'lv-clear'}">${l.verdict}</span>
+    </div>`).join('');
+}
+renderLedger();
+document.getElementById('logBtn').addEventListener('click', ()=>{
+  const {risk}=computeRisk();
+  ledger.unshift({id:'TX-'+(txCounter++), amt:parseCurrency(txAmt.value), risk, verdict: risk>0.55?'FLAGGED':'CLEARED'});
+  renderLedger(true);
+});
+
+/* ---------- NAV: highlight current section ---------- */
+(function(){
+  const links=[...document.querySelectorAll('.nav-links a[href^="#"]')];
+  if(!links.length) return;
+  const map=new Map();
+  links.forEach(a=>{ const t=document.querySelector(a.getAttribute('href')); if(t) map.set(t,a); });
+  const setActive=a=>links.forEach(l=>l.classList.toggle('active', l===a));
+  const io=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{ if(e.isIntersecting) setActive(map.get(e.target)); });
+  },{rootMargin:'-45% 0px -50% 0px'});
+  map.forEach((a,t)=>io.observe(t));
+})();
+
+/* ---------- SPOTLIGHT + LIFT HOVER ---------- */
+document.querySelectorAll('.signal-card, .mc-card, .telemetry-card, .team-row').forEach(el=>{
+  el.classList.add('fx-spot');
+  if(!el.classList.contains('team-row')) el.classList.add('fx-lift');
+  el.addEventListener('pointermove', e=>{
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  });
+});
+
+/* ---------- MAGNETIC BUTTONS ---------- */
+if(FINE_POINTER && !REDUCED){
+  document.querySelectorAll('.log-btn').forEach(btn=>{
+    btn.addEventListener('pointermove', e=>{
+      const r = btn.getBoundingClientRect();
+      const dx = e.clientX - (r.left + r.width/2), dy = e.clientY - (r.top + r.height/2);
+      btn.style.translate = (dx*0.12)+'px '+(dy*0.25)+'px';
+    });
+    btn.addEventListener('pointerleave', ()=>{ btn.style.translate = ''; });
+  });
+}
+
+/* ---------- STAT COUNT-UP ---------- */
+(function(){
+  if(REDUCED) return;
+  const vals = [...document.querySelectorAll('.metric .val')].filter(v=>/^[\d.,]+%?$/.test(v.textContent.trim()));
+  const io = new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(!e.isIntersecting) return;
+      io.unobserve(e.target);
+      const el = e.target, final = el.textContent.trim();
+      const m = final.match(/^([\d.,]+)(%?)$/);
+      const num = parseFloat(m[1].replace(/,/g,'')), suffix = m[2];
+      const dec = (m[1].split('.')[1] || '').length;
+      const t0 = performance.now(), dur = 1300;
+      (function step(now){
+        const k = Math.min(1,(now-t0)/dur), ease = 1-Math.pow(1-k,3);
+        el.textContent = (num*ease).toFixed(dec) + suffix;
+        if(k<1) requestAnimationFrame(step); else el.textContent = final;
+      })(t0);
+    });
+  },{threshold:0.8});
+  vals.forEach(v=>io.observe(v));
+})();
+</script>
+</body>
+</html>

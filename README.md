@@ -48,7 +48,7 @@ FRAUD-DETECTION-AI/
 │   │   └── metrics.json      # Benchmark results from notebooks
 │   ├── static/
 │   │   └── bridge.js         # Integration bridge injected in-memory at runtime
-│   ├── tests/                # 70 automated pytest test cases
+│   ├── tests/                # 99 automated pytest test cases
 │   ├── requirements.txt      # Pinned dependencies matching training environment
 │   └── README.md
 └── docs/                     # Comprehensive project documentation
@@ -65,7 +65,7 @@ FRAUD-DETECTION-AI/
 
 ## Test Suite Execution
 
-Run all 70 automated tests:
+Run all 99 automated tests:
 ```bash
 python -m pytest backend/tests/ -v
 ```

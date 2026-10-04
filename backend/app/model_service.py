@@ -85,6 +85,37 @@ class ModelService:
     def is_loaded(self) -> bool:
         return self._is_loaded
 
+    def compute_tree_contributions(self, scaled_features: np.ndarray) -> np.ndarray:
+        """Compute exact instance feature contributions (Saabas/TreeInterpreter) for Random Forest.
+
+        Decomposes the prediction into the exact delta each feature added along the decision paths
+        across all 50 trees in the ensemble.
+        """
+        if self.model is None:
+            raise RuntimeError("Model is not loaded.")
+
+        X_scaled_f32 = scaled_features.astype(np.float32)
+        n_features = X_scaled_f32.shape[1]
+        contributions = np.zeros(n_features)
+
+        for estimator in self.model.estimators_:
+            tree = estimator.tree_
+            # Class 1 is fraud probability at each node
+            values = tree.value[:, 0, :]
+            node_probs = values[:, 1] / values.sum(axis=1)
+
+            node_indicators = tree.decision_path(X_scaled_f32).indices
+            for i in range(len(node_indicators) - 1):
+                curr_node = node_indicators[i]
+                next_node = node_indicators[i + 1]
+                split_feat = tree.feature[curr_node]
+                diff = node_probs[next_node] - node_probs[curr_node]
+                contributions[split_feat] += diff
+
+        n_trees = len(self.model.estimators_)
+        contributions /= n_trees
+        return contributions
+
     def predict_risk(self, features_df: pd.DataFrame) -> Tuple[float, np.ndarray]:
         """Predict fraud probability using the scaled feature vector.
 
@@ -99,9 +130,20 @@ class ModelService:
 
         scaled = self.scaler.transform(features_df)
         probs = self.model.predict_proba(scaled)
-        # Class index 1 corresponds to fraud
         fraud_prob = float(probs[0, 1])
         return fraud_prob, scaled
+
+    def predict_risk_and_contributions(
+        self, features_df: pd.DataFrame
+    ) -> Tuple[float, np.ndarray, np.ndarray]:
+        """Predict fraud probability and calculate exact instance feature contributions.
+
+        Returns:
+            Tuple of (fraud_probability: float, scaled_features: np.ndarray, contributions: np.ndarray)
+        """
+        fraud_prob, scaled = self.predict_risk(features_df)
+        contributions = self.compute_tree_contributions(scaled)
+        return fraud_prob, scaled, contributions
 
 
 # Global singleton instance

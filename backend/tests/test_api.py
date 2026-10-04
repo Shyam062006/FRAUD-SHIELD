@@ -80,11 +80,13 @@ def test_sample_legit_vs_sample_fraud(client):
     assert data_legit["verdict"] == "CLEARED"
     assert all(r["level"] == 0 for r in data_legit["reasons"])
 
-    # Fraud Output Analysis
+    # Fraud Output Analysis (Risk 32%, sub-threshold Cleared)
     assert data_fraud["risk"] == 0.32
     # Sensibly distinct: fraud risk is dramatically higher than legit
     assert data_fraud["risk"] > data_legit["risk"] + 0.30
-    assert any(r["level"] == 2 for r in data_fraud["reasons"])
+    assert any(r["level"] == 1 for r in data_fraud["reasons"])
+    # Invariant: Sub-threshold cleared transaction must not have level 2 reasons
+    assert all(r["level"] < 2 for r in data_fraud["reasons"])
 
 
 # ----------------------------------------------------

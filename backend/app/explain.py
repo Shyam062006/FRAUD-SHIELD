@@ -1,18 +1,21 @@
-"""Plain-language explanation engine for FRAUD SHIELD predictions.
+"""Model-grounded explanation engine for FRAUD SHIELD predictions.
 
-Translates model predictions and feature signals into clear, non-technical,
-human-readable explanations grouped into the 4 standard telemetry signals:
-- amount_pattern
+Translates instance tree contributions (Saabas/TreeInterpreter) and domain signals
+into plain-language, non-technical explanations grouped into the 4 standard telemetry signals:
 - balance_behavior
-- transaction_type
 - time_pattern
+- transaction_type
+- amount_pattern
 
-No raw feature names are exposed to end users.
+Strict Behavioral Invariants:
+1. A reason may be Level 2 (red) or Level 1 (amber) ONLY if that signal pushes risk UP
+   for this specific prediction (or violates the sender balance invariant).
+2. If verdict is CLEARED and risk is below the threshold, NO reason may be Level 2.
+3. No raw internal feature names are exposed to end users.
 """
 
-from typing import List
+from typing import List, Tuple
 import numpy as np
-import pandas as pd
 from app.schemas import ReasonItem, SignalType, TransactionType
 
 
@@ -22,10 +25,12 @@ def generate_reasons(
     sender_balance: float,
     recipient_balance: float,
     time_str: str,
-    fraud_risk: float,
-    feature_importances: np.ndarray,
-) -> List[ReasonItem]:
-    """Generate plain-language explanation reasons based on feature signals and model weights.
+    raw_model_risk: float,
+    threshold: float,
+    contributions: np.ndarray,
+    is_impossible: bool = False,
+) -> Tuple[float, str, List[ReasonItem]]:
+    """Generate plain-language explanation reasons directly grounded in tree path contributions.
 
     Args:
         tx_type: TransactionType (TRANSFER or CASH_OUT)
@@ -33,36 +38,59 @@ def generate_reasons(
         sender_balance: Starting balance of sender
         recipient_balance: Starting balance of recipient
         time_str: HH:MM time string
-        fraud_risk: Model's predicted fraud probability (0..1)
-        feature_importances: Array of model feature importances
+        raw_model_risk: Pure model predicted fraud probability (0..1)
+        threshold: Classification decision threshold (e.g. 0.50)
+        contributions: Array of 9 feature contributions for this instance
+        is_impossible: True if amount > sender_balance
 
     Returns:
-        List of ReasonItem objects, sorted with highest severity first.
+        Tuple of (effective_risk: float, verdict: str, reasons: List[ReasonItem])
     """
-    reasons: List[ReasonItem] = []
+    # 1. Determine effective risk and verdict
+    if is_impossible:
+        effective_risk = max(raw_model_risk, 0.85)
+        verdict = "FLAGGED"
+    else:
+        effective_risk = raw_model_risk
+        verdict = "FLAGGED" if effective_risk >= threshold else "CLEARED"
 
-    # 1. Parse time
-    parts = time_str.split(":")
-    hour = int(parts[0])
+    is_flagged = (verdict == "FLAGGED")
 
-    # 2. Compute financial ratios
+    # 2. Decompose contributions across the 4 signal categories:
+    # 0: step, 1: amount, 2: oldbalanceOrg, 3: newbalanceOrig, 4: oldbalanceDest,
+    # 5: newbalanceDest, 6: errorBalanceOrig, 7: errorBalanceDest, 8: type_TRANSFER
+    phi_time = float(contributions[0])
+    phi_amount = float(contributions[1])
+    phi_balance = float(contributions[[2, 3, 4, 5, 6, 7]].sum())
+    phi_type = float(contributions[8])
+
+    # 3. Domain financial ratios and context
     depletion_ratio = amount / (sender_balance + 1.0)
     used_pct = int(min(1.0, max(0.0, depletion_ratio)) * 100)
     dest_ratio = recipient_balance / (amount + 1.0)
+    hour = int(time_str.split(":")[0])
 
-    # ----------------------------------------------------
+    reasons: List[ReasonItem] = []
+
+    # -------------------------------------------------------------------------
     # Signal 1: Balance Behavior
-    # ----------------------------------------------------
-    # In the model, newbalanceOrig and errorBalanceOrig account for >60% of total importance.
-    if depletion_ratio >= 0.80 or amount >= sender_balance:
+    # -------------------------------------------------------------------------
+    if is_impossible:
         bal_level = 2
-        bal_text = f"Most of the sender's balance ({used_pct}%) is being moved in one go."
-    elif depletion_ratio >= 0.40:
-        bal_level = 1
-        bal_text = f"A large share of the sender's balance ({used_pct}%) is being moved."
+        bal_text = "Amount is larger than the sender's balance."
+    elif phi_balance > 0.01:
+        if is_flagged and (phi_balance >= 0.08 or depletion_ratio >= 0.80):
+            bal_level = 2
+            if dest_ratio < 0.10 and amount >= 3000.0:
+                bal_text = f"Most of the sender's balance ({used_pct}%) is being moved in one go to an empty receiving account."
+            else:
+                bal_text = f"Most of the sender's balance ({used_pct}%) is being moved in one go."
+        else:
+            bal_level = 1
+            bal_text = f"A large share of the sender's balance ({used_pct}%) is being moved."
     else:
         bal_level = 0
-        bal_text = "The amount is small compared with the sender's balance."
+        bal_text = "The transaction amount is well within the sender's available balance."
 
     reasons.append(
         ReasonItem(
@@ -72,30 +100,19 @@ def generate_reasons(
         )
     )
 
-    # Recipient balance context (secondary balance check)
-    if dest_ratio < 0.10 and amount >= 3000.0:
-        dest_level = 2 if amount >= 8000.0 else 1
-        dest_text = "The receiving account holds very little compared with the amount sent."
-        reasons.append(
-            ReasonItem(
-                level=dest_level,
-                text=dest_text,
-                signal=SignalType.BALANCE_BEHAVIOR,
-            )
-        )
-
-    # ----------------------------------------------------
+    # -------------------------------------------------------------------------
     # Signal 2: Time Pattern
-    # ----------------------------------------------------
-    if hour < 5 or hour >= 23:
-        time_level = 2
-        time_text = "Sent late at night or in the early hours, when fraud is more common."
-    elif 5 <= hour < 7:
-        time_level = 1
-        time_text = "Sent early in the morning, which is slightly unusual."
+    # -------------------------------------------------------------------------
+    if phi_time > 0.01 and (hour < 7 or hour >= 23):
+        if is_flagged and (phi_time >= 0.08 or hour < 5 or hour >= 23):
+            time_level = 2
+            time_text = "Sent late at night or in the early morning hours, when fraud rates peak."
+        else:
+            time_level = 1
+            time_text = f"Sent during off-peak morning hours ({time_str}), slightly increasing risk."
     else:
         time_level = 0
-        time_text = "Sent at a normal time of day."
+        time_text = f"Sent at a normal operating hour ({time_str})."
 
     reasons.append(
         ReasonItem(
@@ -105,15 +122,30 @@ def generate_reasons(
         )
     )
 
-    # ----------------------------------------------------
+    # -------------------------------------------------------------------------
     # Signal 3: Transaction Type
-    # ----------------------------------------------------
-    if tx_type == TransactionType.CASH_OUT:
-        type_level = 1
-        type_text = "Cash-outs move money out of the system, so they are watched more closely than transfers."
+    # -------------------------------------------------------------------------
+    if phi_type > 0.01:
+        if tx_type == TransactionType.CASH_OUT:
+            if is_flagged and phi_type >= 0.08:
+                type_level = 2
+                type_text = "Cash-outs immediately extract liquidity outside the monitored banking network."
+            else:
+                type_level = 1
+                type_text = "Cash-outs move money out of the banking network, increasing scrutiny."
+        else:
+            if is_flagged and phi_type >= 0.08:
+                type_level = 2
+                type_text = "High-velocity account transfer frequently used to stage fraudulent funds."
+            else:
+                type_level = 1
+                type_text = "Transfer channel exhibits higher baseline risk than standard operations."
     else:
         type_level = 0
-        type_text = "Direct transfer between accounts within standard clearing parameters."
+        if tx_type == TransactionType.CASH_OUT:
+            type_text = "Cash-out transaction within normal account profile."
+        else:
+            type_text = "Direct transfer between registered accounts."
 
     reasons.append(
         ReasonItem(
@@ -123,18 +155,19 @@ def generate_reasons(
         )
     )
 
-    # ----------------------------------------------------
+    # -------------------------------------------------------------------------
     # Signal 4: Amount Pattern
-    # ----------------------------------------------------
-    if amount >= 250000.0:
-        amt_level = 2
-        amt_text = "Very high-value transfer moving substantial capital in a single operation."
-    elif amount >= 50000.0:
-        amt_level = 1
-        amt_text = "Above-average transaction value for personal account transfers."
+    # -------------------------------------------------------------------------
+    if phi_amount > 0.01 and amount >= 50000.0:
+        if is_flagged and (phi_amount >= 0.08 or amount >= 250000.0):
+            amt_level = 2
+            amt_text = "High-value transfer moving substantial capital in a single operation."
+        else:
+            amt_level = 1
+            amt_text = "Above-average transaction value."
     else:
         amt_level = 0
-        amt_text = "Standard transaction amount within ordinary operational bounds."
+        amt_text = "Transaction amount is within typical operating bounds."
 
     reasons.append(
         ReasonItem(
@@ -144,6 +177,16 @@ def generate_reasons(
         )
     )
 
-    # Sort reasons by severity level descending (level 2 -> 1 -> 0)
+    # -------------------------------------------------------------------------
+    # Strict Consistency Invariants:
+    # 1. If verdict is CLEARED, NO reason may be level 2 (Rule 2).
+    # 2. A reason may be level 2 or 1 ONLY if that signal pushes risk UP (Rule 1).
+    # -------------------------------------------------------------------------
+    if not is_flagged:
+        for r in reasons:
+            if r.level == 2:
+                r.level = 1
+
+    # Sort descending by severity (level 2 -> 1 -> 0)
     reasons.sort(key=lambda r: r.level, reverse=True)
-    return reasons
+    return effective_risk, verdict, reasons

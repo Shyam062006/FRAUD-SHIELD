@@ -67,19 +67,18 @@ def extract_features(request: PredictRequest) -> pd.DataFrame:
     newbalance_orig = max(0.0, oldbalance_org - amount)
 
     # Post-transaction recipient balance
-    is_transfer = (request.type == TransactionType.TRANSFER)
-    if is_transfer:
+    # In the PaySim dataset, when the recipient account starts with zero balance,
+    # incoming funds are either immediately cashed out or routed to an unverified sink (newbalanceDest = 0.0).
+    # When recipient starting balance > 0, the balance increases: oldbalanceDest + amount.
+    if oldbalance_dest > 0.0:
         newbalance_dest = oldbalance_dest + amount
     else:
-        # CASH_OUT: Funds withdrawn via merchant or cashout sink
-        if oldbalance_dest > 0.0:
-            newbalance_dest = oldbalance_dest + amount
-        else:
-            newbalance_dest = 0.0
+        newbalance_dest = 0.0
 
     # Engineered accounting error balances
     error_balance_orig = newbalance_orig + amount - oldbalance_org
     error_balance_dest = oldbalance_dest + amount - newbalance_dest
+    is_transfer = (request.type == TransactionType.TRANSFER)
     type_transfer = 1.0 if is_transfer else 0.0
 
     feature_dict: Dict[str, float] = {
