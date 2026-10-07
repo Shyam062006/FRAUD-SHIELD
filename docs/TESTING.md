@@ -8,7 +8,7 @@
 
 ## 1. Test Architecture & Structure
 
-The test suite is located under [backend/tests/](file:///c:/Users/siddh/OneDrive/Desktop/FRAUD-DETECTION-AI/backend/tests/) and divided into dedicated test modules:
+The test suite is located under [`backend/tests/`](../backend/tests/) and divided into dedicated test modules:
 
 ```
 backend/tests/

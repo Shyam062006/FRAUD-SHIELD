@@ -75,18 +75,18 @@ uvicorn app.main:app --reload --host 127.0.0.1 --port 8000
 2. **Deterministic Feature Engineering:** Form inputs are mapped into the exact 9 features expected by the trained Random Forest and scaled with the production `StandardScaler`.
 3. **Plain-Language Explanations:** Real model weights and transaction attributes are mapped into 4 telemetry signals (`balance_behavior`, `time_pattern`, `transaction_type`, `amount_pattern`) with severity levels (0, 1, 2) without exposing technical feature names.
 4. **Graceful Fallback:** If the backend ever goes offline, the UI silently falls back to local client simulation without page errors.
-5. **Comprehensive Test Suite:** 70 automated tests covering unit logic, validation limits, golden equivalence, threshold behavior, and API endpoints.
+5. **Comprehensive Test Suite:** 99 automated tests covering unit logic, validation limits, golden equivalence, threshold behavior, and API endpoints.
 
 ---
 
 ## 4. Documentation Index
 
-- [docs/API.md](file:///c:/Users/siddh/OneDrive/Desktop/FRAUD-DETECTION-AI/docs/API.md): API endpoint reference with sample requests and responses.
-- [docs/ARCHITECTURE.md](file:///c:/Users/siddh/OneDrive/Desktop/FRAUD-DETECTION-AI/docs/ARCHITECTURE.md): Detailed data flow and sequence diagrams.
-- [docs/ML_NOTES.md](file:///c:/Users/siddh/OneDrive/Desktop/FRAUD-DETECTION-AI/docs/ML_NOTES.md): Machine learning methodology, feature details, benchmark metrics, and limitations.
-- [docs/TESTING.md](file:///c:/Users/siddh/OneDrive/Desktop/FRAUD-DETECTION-AI/docs/TESTING.md): Test suite execution instructions and test case catalog.
-- [docs/DISCOVERY.md](file:///c:/Users/siddh/OneDrive/Desktop/FRAUD-DETECTION-AI/docs/DISCOVERY.md): Pre-implementation discovery findings.
-- [docs/UI_HASH.txt](file:///c:/Users/siddh/OneDrive/Desktop/FRAUD-DETECTION-AI/docs/UI_HASH.txt): Cryptographic verification hash of `frontend/index.html`.
+- [docs/API.md](API.md): API endpoint reference with sample requests and responses.
+- [docs/ARCHITECTURE.md](ARCHITECTURE.md): Detailed data flow and sequence diagrams.
+- [docs/ML_NOTES.md](ML_NOTES.md): Machine learning methodology, feature details, benchmark metrics, and limitations.
+- [docs/TESTING.md](TESTING.md): Test suite execution instructions and test case catalog.
+- [docs/DISCOVERY.md](DISCOVERY.md): Pre-implementation discovery findings.
+- [docs/UI_HASH.txt](UI_HASH.txt): Cryptographic verification hash of `frontend/index.html`.
 
 ---
 

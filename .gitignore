@@ -1,12 +1,44 @@
+# Python bytecode & cache
 __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
-.env
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Virtual Environments
 .venv/
 env/
 venv/
+ENV/
+
+# Environment Variables & Secrets
+.env
+.env.local
+.env.*.local
+
+# Node / Frontend dependencies
+node_modules/
+
+# Logs & runtime artifacts
+logs/
 *.log
+
+# Large Datasets & Raw Data (Never commit raw CSV/compressed dumps)
+data/*.csv
+data/*.parquet
+data/*.zip
+data/*.tar.gz
+*.csv
+*.parquet
+
+# Build & Distribution
+build/
+dist/
+*.egg-info/
+
+# Operating System files
 .DS_Store
 Thumbs.db
-
+desktop.ini

@@ -1,19 +1,17 @@
-# ML & Data Science Libraries (pinned to match notebook training environment)
+# ML Runtime Artifact Dependencies (pinned to model training environment)
 scikit-learn==1.6.1
-xgboost==3.4.1
 pandas==2.2.3
 numpy==2.1.3
 joblib==1.6.0
-scipy==1.16.3
 
-# Backend & API Framework
+# Backend & REST API Framework
 fastapi>=0.115.0,<1.0.0
 uvicorn[standard]>=0.30.0,<1.0.0
 pydantic>=2.9.0,<3.0.0
 pydantic-settings>=2.5.0,<3.0.0
 python-dotenv>=1.0.1
 
-# Testing & Utilities
+# Testing & Client Utilities
 httpx>=0.27.0
 pytest>=8.0.0
 pytest-asyncio>=0.23.0

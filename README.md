@@ -445,6 +445,12 @@ python -m pytest backend/tests/ -v
 
 ---
 
+## Contributing
+
+This repository is maintained as an educational and portfolio capstone project. External pull requests are not actively monitored or accepted, but you are welcome to fork the repository and experiment with novel feature pipelines or architectures.
+
+---
+
 ## License
 
 This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
