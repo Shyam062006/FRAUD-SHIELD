@@ -437,7 +437,10 @@ python -m pytest backend/tests/ -v
 ## Team & Acknowledgments
 
 ### Project Team
-- **Siddharth Meka** — *Lead Machine Learning & Backend Engineer* ([GitHub](https://github.com/siddharth-meka-16))
+- **Shyam** — *Frontend & Visualizations* ([GitHub](https://github.com/Shyam062006))
+- **Siddharth** — *Model Training & Architecture* ([GitHub](https://github.com/siddharth-meka-16))
+- **Cherry** — *Data Pipeline & ML Benchmarking* ([GitHub](https://github.com/neelsihsricharan))
+- **Shariq** — *Integration & Model Validation* ([GitHub](https://github.com/shariq12721-source))
 - *Academic Advisor / Capstone Review Committee*
 
 ### Acknowledgments
