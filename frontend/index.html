@@ -400,8 +400,22 @@ footer{padding:40px 6vw 60px; text-align:center; font-size:11px; color:#B8A878; 
   transition:border-color .25s ease, transform .25s ease;
 }
 .team-row:hover{border-color:var(--gold); transform:translateY(-3px);}
-.tr-name{font-weight:600; font-size:15px; color:var(--titanium); transition:color .25s ease;}
-.team-row:hover .tr-name{color:var(--champagne);}
+.tr-name{
+  font-weight:600; font-size:15px;
+  background-image:linear-gradient(to right,
+    #8A3500 0%, #E65C00 20%, #FFB070 40%, #FF7A1A 50%, #FFB070 60%, #E65C00 80%, #8A3500 100%);
+  background-size:200% auto;
+  -webkit-background-clip:text; background-clip:text;
+  color:transparent; -webkit-text-fill-color:transparent;
+  animation:orangeShine 5s linear infinite;
+}
+@keyframes orangeShine{
+  0%{background-position:-200% center;}
+  100%{background-position:200% center;}
+}
+.team-row:nth-child(2) .tr-name{animation-delay:-1.2s;}
+.team-row:nth-child(3) .tr-name{animation-delay:-2.4s;}
+.team-row:nth-child(4) .tr-name{animation-delay:-3.6s;}
 .tr-role{font-size:11px; color:#E4DAC0; letter-spacing:0.04em;}
 .team-float{
   position:fixed; left:0; top:0; z-index:60; pointer-events:none; opacity:0;
